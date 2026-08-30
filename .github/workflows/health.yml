@@ -1,0 +1,46 @@
+name: Health check
+
+# End-to-end check against the live Google Chat API. Auth is the OAuth2 refresh
+# flow (client id/secret + refresh token stored as repo secrets — no per-run
+# minting by hand). Without GOOGLE_CHAT_SMOKE_SPACE the smoke is READ-ONLY: it
+# mints an access token and lists one page of spaces. Setting the
+# GOOGLE_CHAT_SMOKE_SPACE secret opts into the full disposable write cycle in
+# that (dedicated test) space — send/update/read a throwaway message and delete
+# it in a finally block, so the space stays clean after success and failure.
+# Runs daily + manual dispatch only (never on push/PR), so secrets aren't
+# exposed to PRs/forks; the smoke step skips itself when the secrets are not
+# configured.
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    if: github.repository == 'A1-x-Tech/mcp-google-chat'
+    env:
+      GOOGLE_CHAT_CLIENT_ID: ${{ secrets.GOOGLE_CHAT_CLIENT_ID }}
+      GOOGLE_CHAT_CLIENT_SECRET: ${{ secrets.GOOGLE_CHAT_CLIENT_SECRET }}
+      GOOGLE_CHAT_REFRESH_TOKEN: ${{ secrets.GOOGLE_CHAT_REFRESH_TOKEN }}
+      GOOGLE_CHAT_SMOKE_SPACE: ${{ secrets.GOOGLE_CHAT_SMOKE_SPACE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - name: Live smoke check
+        if: env.GOOGLE_CHAT_CLIENT_ID != ''
+        run: npm run smoke
+      - name: Skipped (no secrets configured)
+        if: env.GOOGLE_CHAT_CLIENT_ID == ''
+        run: echo "GOOGLE_CHAT_* secrets are not set — live smoke skipped."
