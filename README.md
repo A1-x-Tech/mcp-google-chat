@@ -3,8 +3,8 @@
 **English** | [Русский](./README.ru.md)
 
 [![npm](https://img.shields.io/npm/v/mcp-google-chat)](https://www.npmjs.com/package/mcp-google-chat)
-[![CI](https://github.com/A1-x-Tech/mcp-google-chat/actions/workflows/ci.yml/badge.svg)](https://github.com/A1-x-Tech/mcp-google-chat/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/A1-x-Tech/mcp-google-chat/badges/score.svg)](https://glama.ai/mcp/servers/A1-x-Tech/mcp-google-chat)
+[![CI](https://github.com/A1-x-Tech/mcp-google-chat/actions/workflows/ci.yml/badge.svg)](https://github.com/A1-x-Tech/mcp-google-chat/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 **A1 Google Chat MCP** lets an AI app work in Google Chat in plain language. Find the right space or direct message, catch up on a conversation, reply in a thread, react with an emoji and manage who is in a space.
