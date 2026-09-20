@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-20
+
+### Added
+
+- In-chat Google login via `@a1-x-tech/mcp-google-auth` — 6 new onboarding
+  tools: `auth_status`, `setup_instructions`, `set_client`, `start_login`
+  (deliberately not read-only), `finish_login`, `logout`. The flow is loopback
+  `127.0.0.1` + PKCE against a user-owned Desktop OAuth client; the code is
+  exchanged locally and the client secret never passes through the chat.
+  20 tools total, each with a capability page under `docs/capabilities/`.
+- `finish_login` verifies a fresh login against the **Chat API itself**
+  (`spaces.list`, one page) rather than Google's identity endpoint: OIDC
+  answers even when the Chat API is switched off in the Cloud project, which
+  would make a broken setup look connected. A 403 that says the API is disabled
+  is translated into the actual fix — enable it in the same project as the
+  OAuth client — instead of a bare `PERMISSION_DENIED`.
+- Tokens from a login are stored per server in
+  `~/.config/mcp-google-chat/credentials.json` (0600) and re-read on every
+  call, so a login finished mid-session works without restarting the AI client.
+  `GOOGLE_CHAT_OAUTH_PORT` pins the loopback listener port for SSH forwarding.
+
+### Changed
+
+- `GoogleChatClient` accepts the component's `TokenProvider` as a fallback
+  token source: environment credentials (the refresh triple or
+  `GOOGLE_CHAT_ACCESS_TOKEN`) keep absolute priority and behave exactly as
+  before; the stored in-chat login is used only when the environment carries no
+  credentials. The single 401 re-mint + replay now works for provider-backed
+  tokens too, and is skipped when nothing can be re-minted.
+- The unconfigured `initialize` instructions lead with the in-chat login
+  (`setup_instructions` → `set_client` → `start_login` → `finish_login`, no
+  restart needed); setting the environment variables + restart remains the
+  documented alternative.
+
+### Notes
+
+- The login requests `chat.spaces.readonly`, `chat.messages`,
+  `chat.messages.reactions` and `chat.memberships.readonly`. The org-wide
+  `chat.admin.spaces.readonly` scope behind `search_spaces` is deliberately NOT
+  requested — admins keep using the environment path, where the scope set is
+  theirs to choose.
+
 ## [0.1.0] - 2026-08-30
 
 ### Added

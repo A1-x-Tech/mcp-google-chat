@@ -23,6 +23,21 @@ manager. Acting as a **Chat app** (cards, app DMs, `get_attachment`,
 account + Chat app settings); the only bridge here is a static
 `GOOGLE_CHAT_ACCESS_TOKEN` minted externally for that service account.
 
+## Connection
+
+Registered by [`@a1-x-tech/mcp-google-auth`](https://www.npmjs.com/package/@a1-x-tech/mcp-google-auth) — the shared in-chat login of the `mcp-google-*` line. Environment credentials always win over a login stored here.
+
+| Tool | Description |
+|---|---|
+| `auth_status` | Token present or not, its source (env vs stored login), expiry, account email, scopes and file paths. Local only, no network call. |
+| `setup_instructions` | The Cloud-console checklist: project, **Google Chat API**, consent screen, **Desktop app** OAuth client. |
+| `set_client` | Stores the OAuth client from the downloaded `client_secret_*.json` — takes the file **path**, so the secret never passes through the chat. Shared across `mcp-google-*`; tokens stay per server. |
+| `start_login` | Returns the Google consent URL; a one-shot `127.0.0.1` listener (PKCE) catches the redirect. Not read-only on purpose — it binds a port and starts a flow. Expires in 10 minutes. |
+| `finish_login` | Exchanges the code, stores tokens in `~/.config/mcp-google-chat/credentials.json` (0600) and verifies them with a real Chat call; a disabled-API 403 becomes "enable the Chat API in the same project". |
+| `logout` | Revokes the token at Google and deletes the local login. `GOOGLE_CHAT_*` variables are untouched. |
+
+Scopes requested by a login: `chat.spaces.readonly`, `chat.messages`, `chat.messages.reactions`, `chat.memberships.readonly`. `search_spaces` needs the admin scope, which a login deliberately does not request — use the environment path for it.
+
 ## Spaces
 
 | Tool | Description |
@@ -98,12 +113,13 @@ Grant only what the session needs; the server sends whatever token it was given:
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `GOOGLE_CHAT_CLIENT_ID` | yes* | — | OAuth2 client id (refresh flow). |
-| `GOOGLE_CHAT_CLIENT_SECRET` | yes* | — | OAuth2 client secret (refresh flow). Secret. |
-| `GOOGLE_CHAT_REFRESH_TOKEN` | yes* | — | OAuth2 refresh token (refresh flow). Secret. |
-| `GOOGLE_CHAT_ACCESS_TOKEN` | yes* | — | Alternative: static access token (~1 h lifetime; can be a service-account/Chat-app token). Secret. |
+| `GOOGLE_CHAT_CLIENT_ID` | no* | — | OAuth2 client id (refresh flow). |
+| `GOOGLE_CHAT_CLIENT_SECRET` | no* | — | OAuth2 client secret (refresh flow). Secret. |
+| `GOOGLE_CHAT_REFRESH_TOKEN` | no* | — | OAuth2 refresh token (refresh flow). Secret. |
+| `GOOGLE_CHAT_ACCESS_TOKEN` | no* | — | Alternative: static access token (~1 h lifetime; can be a service-account/Chat-app token). Secret. |
+| `GOOGLE_CHAT_OAUTH_PORT` | no | — | Fixed loopback port for `start_login` (SSH port forwarding); otherwise a free port per login. |
 | `GOOGLE_CHAT_API_BASE` | no | `https://chat.googleapis.com` | API root override. |
 | `GOOGLE_CHAT_TIMEOUT_MS` | no | `60000` | Per-request timeout, ms. |
 | `GOOGLE_CHAT_MAX_RETRIES` | no | `3` | Retries on transient errors. |
 
-\* Either the refresh triple together, or the static access token.
+\* None of them is required: without credentials the server connects through the in-chat login above. For the environment path, provide either the refresh triple together or the static access token; both win over a stored login, and the server never refreshes or deletes them.

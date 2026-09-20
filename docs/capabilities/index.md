@@ -1,8 +1,17 @@
 # Google Chat MCP capabilities
 
-This catalog contains 14 public pages—one for every registered MCP tool in `mcp-google-chat`. Each page starts with the user's task, explains the result, and states whether the call changes real data.
+This catalog contains 20 public pages—one for every registered MCP tool in `mcp-google-chat`. Each page starts with the user's task, explains the result, and states whether the call changes real data.
 
 Use this catalog to choose a ready-made capability. Full parameter schemas and API response details remain in the [technical reference](../TOOLS.md).
+
+## Connection
+
+- [Connection status](./auth-status.md) — Reports whether Google Chat is connected, where the token comes from and which account it belongs to. **Impact:** read-only.
+- [Setup instructions](./setup-instructions.md) — Returns the step-by-step text for creating a Google Cloud OAuth client and enabling the Chat API. **Impact:** read-only.
+- [Save the OAuth client](./set-client.md) — Reads the OAuth client JSON downloaded from Google Cloud Console by path and stores it for every mcp-google-* server. **Impact:** changes data.
+- [Start the login](./start-login.md) — Opens a loopback + PKCE login and returns the Google consent URL. **Impact:** changes data.
+- [Finish the login](./finish-login.md) — Exchanges the approved consent for tokens, stores them owner-only and verifies them against the Chat API. **Impact:** changes data.
+- [Disconnect](./logout.md) — Revokes the stored token at Google and deletes the local login. **Impact:** destructive operation.
 
 ## Spaces
 

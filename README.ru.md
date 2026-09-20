@@ -11,7 +11,7 @@
 
 Сервер работает с Google Chat API через ваш Google-аккаунт и действует от имени вошедшего пользователя: сообщения отправляются под вашим именем, а редактировать и удалять можно только собственные сообщения и реакции. Ограничения Chat API он показывает явно, а не создаёт впечатление, что в чате можно сделать всё.
 
-- **14 инструментов.** Поиск пространств и личных чатов, чтение и отправка сообщений с управлением тредами, эмодзи-реакции, метаданные вложений и управление участниками.
+- **20 инструментов.** Подключение из диалога, поиск пространств и личных чатов, чтение и отправка сообщений с управлением тредами, эмодзи-реакции, метаданные вложений и управление участниками.
 - **Вы действуете от своего имени.** Отправленное появляется под вашим именем; редактирование и удаление не выходят за пределы ваших собственных сообщений и реакций.
 - **Отправка никогда не повторяется.** После неоднозначного сбоя сервер не повторяет запись — повторённая отправка стала бы дублем сообщения в реальном чате.
 - **Минимальные scope Google.** Сервер отправляет тот токен, который вы выпустили; запрашивайте scope под задачу — для просмотра пространств и сообщений хватает read-only.
@@ -52,10 +52,10 @@
 
 ## Быстрый старт
 
-Нужны Node.js 20+, Google-аккаунт с доступом к Google Chat и OAuth-данные из проекта Google Cloud с включённым Google Chat API.
+Нужны Node.js 20+ и Google-аккаунт с доступом к Google Chat. Учётные данные при установке не нужны: сервер подключается прямо в диалоге.
 
-1. [Подготовьте Google OAuth-доступ](#как-получить-доступ).
-2. Добавьте сервер в AI-приложение.
+1. Добавьте сервер в AI-приложение.
+2. Скажите «подключи Google Chat» — ассистент проведёт [создание OAuth-клиента и выдачу доступа](#как-получить-доступ), не трогая конфиги и без перезапуска.
 3. Отправьте запрос, который только читает данные.
 
 <details open>
@@ -63,15 +63,12 @@
 
 <br>
 
-**В приложении:** откройте **Settings → MCP servers**, нажмите **Add server**, выберите **STDIO**, укажите команду `npx -y mcp-google-chat@latest` и переменные окружения `GOOGLE_CHAT_CLIENT_ID`, `GOOGLE_CHAT_CLIENT_SECRET`, `GOOGLE_CHAT_REFRESH_TOKEN`, затем нажмите **Save**, потом **Restart**.
+**В приложении:** откройте **Settings → MCP servers**, нажмите **Add server**, выберите **STDIO**, укажите команду `npx -y mcp-google-chat@latest` и нажмите **Save**. Переменные окружения не нужны — подключение делается потом прямо в диалоге.
 
 **В командной строке:**
 
 ```bash
 codex mcp add google-chat \
-  --env GOOGLE_CHAT_CLIENT_ID=your_client_id \
-  --env GOOGLE_CHAT_CLIENT_SECRET=your_client_secret \
-  --env GOOGLE_CHAT_REFRESH_TOKEN=your_refresh_token \
   -- npx -y mcp-google-chat@latest
 ```
 
@@ -90,9 +87,6 @@ codex mcp list
 
 ```bash
 claude mcp add \
-  --env GOOGLE_CHAT_CLIENT_ID=your_client_id \
-  --env GOOGLE_CHAT_CLIENT_SECRET=your_client_secret \
-  --env GOOGLE_CHAT_REFRESH_TOKEN=your_refresh_token \
   --transport stdio --scope user google-chat \
   -- npx -y mcp-google-chat@latest
 ```
@@ -119,12 +113,7 @@ claude mcp list
   "mcpServers": {
     "google-chat": {
       "command": "npx",
-      "args": ["-y", "mcp-google-chat@latest"],
-      "env": {
-        "GOOGLE_CHAT_CLIENT_ID": "your_client_id",
-        "GOOGLE_CHAT_CLIENT_SECRET": "your_client_secret",
-        "GOOGLE_CHAT_REFRESH_TOKEN": "your_refresh_token"
-      }
+      "args": ["-y", "mcp-google-chat@latest"]
     }
   }
 }
@@ -149,12 +138,7 @@ claude mcp list
     "google-chat": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-google-chat@latest"],
-      "env": {
-        "GOOGLE_CHAT_CLIENT_ID": "your_client_id",
-        "GOOGLE_CHAT_CLIENT_SECRET": "your_client_secret",
-        "GOOGLE_CHAT_REFRESH_TOKEN": "your_refresh_token"
-      }
+      "args": ["-y", "mcp-google-chat@latest"]
     }
   }
 }
@@ -177,19 +161,9 @@ claude mcp list
     "google-chat": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-google-chat@latest"],
-      "env": {
-        "GOOGLE_CHAT_CLIENT_ID": "${input:chat_client_id}",
-        "GOOGLE_CHAT_CLIENT_SECRET": "${input:chat_client_secret}",
-        "GOOGLE_CHAT_REFRESH_TOKEN": "${input:chat_refresh_token}"
-      }
+      "args": ["-y", "mcp-google-chat@latest"]
     }
-  },
-  "inputs": [
-    { "type": "promptString", "id": "chat_client_id", "description": "Google OAuth client ID" },
-    { "type": "promptString", "id": "chat_client_secret", "description": "Google OAuth client secret", "password": true },
-    { "type": "promptString", "id": "chat_refresh_token", "description": "Google OAuth refresh token", "password": true }
-  ]
+  }
 }
 ```
 
@@ -250,7 +224,20 @@ Chat API не умеет искать по тексту сообщений — �
 
 ## Как получить доступ
 
-Google Chat требует OAuth 2.0: одного API-ключа недостаточно.
+Google Chat требует OAuth 2.0: одного API-ключа недостаточно. Путей два, и первый не требует править конфигурационные файлы.
+
+### Подключение из диалога (рекомендуемый путь)
+
+Скажите «подключи Google Chat», и ассистент пройдёт флоу вместе с вами:
+
+1. `setup_instructions` выдаёт чек-лист: создать или выбрать проект Google Cloud, включить **Google Chat API**, настроить consent screen и создать OAuth-клиент типа **Desktop app**.
+2. Скачайте JSON этого клиента («Download JSON») и передайте ассистенту **путь** к файлу — `set_client` сохранит его с правами только для владельца. Секрет через переписку не проходит.
+3. `start_login` возвращает ссылку на согласие Google. Откройте её **на этой же машине** и подтвердите доступ: код возвращается на одноразовый слушатель `127.0.0.1` (PKCE), а не в чат.
+4. `finish_login` меняет код на токены, кладёт их в `~/.config/mcp-google-chat/credentials.json` (права 0600) и проверяет реальным вызовом Chat API — так невключённый Chat API ловится сразу, а не на первом рабочем вопросе.
+
+Токены перечитываются на каждый вызов, поэтому подключение действует немедленно — перезапускать AI-приложение не нужно. `auth_status` показывает состояние, `logout` отзывает токен и удаляет его. Логин запрашивает `chat.spaces.readonly`, `chat.messages`, `chat.messages.reactions` и `chat.memberships.readonly`; админский scope, нужный `search_spaces`, намеренно не запрашивается — для него остаётся путь через переменные окружения.
+
+### Переменные окружения (CI и автоматические установки)
 
 1. Создайте или выберите проект Google Cloud и включите **Google Chat API**.
 2. Настройте OAuth consent screen и создайте OAuth-клиент типа **Desktop app**.
@@ -271,19 +258,22 @@ Refresh token OAuth-приложения в режиме Testing может ис
 
 ## Конфигурация
 
+Все переменные необязательные — без единой из них сервер подключается [из диалога](#подключение-из-диалога-рекомендуемый-путь).
+
 | Переменная | Обязательна | Описание |
 |---|---|---|
-| `GOOGLE_CHAT_CLIENT_ID` | Да* | OAuth client ID. |
-| `GOOGLE_CHAT_CLIENT_SECRET` | Да* | OAuth client secret. |
-| `GOOGLE_CHAT_REFRESH_TOKEN` | Да* | OAuth refresh token. |
-| `GOOGLE_CHAT_ACCESS_TOKEN` | Да* | Короткоживущая альтернатива OAuth-тройке; может быть токеном сервисного аккаунта или Chat-приложения. |
+| `GOOGLE_CHAT_CLIENT_ID` | Нет* | OAuth client ID. |
+| `GOOGLE_CHAT_CLIENT_SECRET` | Нет* | OAuth client secret. |
+| `GOOGLE_CHAT_REFRESH_TOKEN` | Нет* | OAuth refresh token. |
+| `GOOGLE_CHAT_ACCESS_TOKEN` | Нет* | Короткоживущая альтернатива OAuth-тройке; может быть токеном сервисного аккаунта или Chat-приложения. |
+| `GOOGLE_CHAT_OAUTH_PORT` | Нет | Фиксированный порт loopback-слушателя для входа из диалога; нужен при пробросе портов по SSH. |
 | `GOOGLE_CHAT_API_BASE` | Нет | Переопределяет базовый URL Google Chat API. |
 | `GOOGLE_CHAT_TIMEOUT_MS` | Нет | Тайм-аут одного запроса; по умолчанию `60000` мс. |
 | `GOOGLE_CHAT_MAX_RETRIES` | Нет | Повторы временных ошибок; по умолчанию `3`. |
 
-\* Передайте OAuth-тройку или access token.
+\* Для пути через окружение передайте OAuth-тройку или access token. Заданные, они имеют приоритет над сохранённым входом из диалога, и сервер их не обновляет и не удаляет.
 
-Запущенный без учётных данных сервер всё равно завершает MCP-рукопожатие; первый вызов инструмента называет точные переменные, которые нужно задать, и просит перезапуск — вместо молчаливого отказа.
+Запущенный без учётных данных сервер всё равно завершает MCP-рукопожатие; инструкции и первый вызов инструмента называют оба способа починки — вход из диалога (без перезапуска) и переменные окружения (с перезапуском).
 
 ## Данные, лимиты и работа в фоне
 

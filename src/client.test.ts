@@ -666,3 +666,79 @@ test("request() still accepts a relative API path with a query string", async ()
     mock.restore();
   }
 });
+
+/**
+ * A stand-in for the auth component's TokenProvider: the client consumes only
+ * `getAccessToken` and `canRefresh`, so a plain object keeps these tests
+ * offline and free of the component's file and network machinery.
+ */
+function fakeProvider(tokens: { normal: string; forced?: string }, canRefresh = true) {
+  const calls: boolean[] = [];
+  let current = tokens.normal;
+  return {
+    calls,
+    canRefresh: () => canRefresh,
+    getAccessToken: async (forceRefresh = false) => {
+      calls.push(forceRefresh);
+      // Mirrors the real provider: a forced re-mint replaces the token the next
+      // unforced call returns, which is what makes the replay carry the new one.
+      if (forceRefresh && tokens.forced) current = tokens.forced;
+      return current;
+    },
+  };
+}
+
+test("no env credentials + provider: the token comes from the in-chat login", async () => {
+  const mock = mockFetch(defaultHandler);
+  try {
+    const provider = fakeProvider({ normal: "LOGIN-TOK" });
+    const client = new GoogleChatClient({ apiBase: BASE, maxRetries: 0, retryBaseMs: 0 }, provider);
+    await client.getSpace("AAA");
+    assert.equal(mock.calls[0].auth, "Bearer LOGIN-TOK");
+    assert.deepEqual(provider.calls, [false], "one plain (unforced) token request");
+  } finally {
+    mock.restore();
+  }
+});
+
+test("env credentials beat the provider (component invariant 3)", async () => {
+  const mock = mockFetch(defaultHandler);
+  try {
+    const provider = fakeProvider({ normal: "LOGIN-TOK" });
+    await new GoogleChatClient(staticConfig(), provider).getSpace("AAA");
+    assert.equal(mock.calls[0].auth, "Bearer STATIC");
+    assert.equal(provider.calls.length, 0, "env access token wins — provider untouched");
+  } finally {
+    mock.restore();
+  }
+});
+
+test("401 on a provider token: one forced re-mint and a replay", async () => {
+  const mock = mockFetch((url, _init, n) => {
+    if (url.startsWith(`${BASE}/v1/spaces/AAA`) && n === 1) {
+      return new Response(JSON.stringify({ error: { code: 401 } }), { status: 401 });
+    }
+    return new Response(JSON.stringify({ name: "spaces/AAA" }), { status: 200 });
+  });
+  try {
+    const provider = fakeProvider({ normal: "OLD-TOK", forced: "NEW-TOK" });
+    const client = new GoogleChatClient({ apiBase: BASE, maxRetries: 0, retryBaseMs: 0 }, provider);
+    await client.getSpace("AAA");
+    assert.deepEqual(provider.calls, [false, true, false], "plain, forced re-mint, then the replay");
+    assert.equal(mock.calls.at(-1)?.auth, "Bearer NEW-TOK");
+  } finally {
+    mock.restore();
+  }
+});
+
+test("401 on a provider that cannot refresh: no replay, the error surfaces", async () => {
+  const mock = mockFetch(() => new Response(JSON.stringify({ error: { code: 401 } }), { status: 401 }));
+  try {
+    const provider = fakeProvider({ normal: "DEAD-TOK" }, false);
+    const client = new GoogleChatClient({ apiBase: BASE, maxRetries: 0, retryBaseMs: 0 }, provider);
+    await assert.rejects(() => client.getSpace("AAA"));
+    assert.equal(mock.calls.length, 1, "replaying a token that cannot be re-minted burns a request");
+  } finally {
+    mock.restore();
+  }
+});

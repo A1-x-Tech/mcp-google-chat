@@ -11,7 +11,8 @@
 
 It uses the Google Chat API with your Google account and acts as the signed-in user: messages send under your name, and only your own messages and reactions can be edited or deleted. It makes the limits of the Chat API explicit instead of implying that every chat task is possible.
 
-- **14 tools.** Discover spaces and direct messages, read and send messages with thread control, manage emoji reactions, read attachment metadata and manage membership.
+- **20 tools.** Connect from the chat, discover spaces and direct messages, read and send messages with thread control, manage emoji reactions, read attachment metadata and manage membership.
+- **Connects from the conversation.** Say "connect Google Chat": the server walks you through the OAuth client, catches Google's redirect on `127.0.0.1` with PKCE and keeps the tokens itself — no config files, no restart.
 - **You act as yourself.** Sends appear under your name; edits and deletes stop at your own messages and reactions.
 - **A send is never replayed.** After an ambiguous failure the server does not retry a write — a replayed send would be a duplicate message in a real room.
 - **Minimal Google scopes.** The server sends whatever token you minted; grant scopes per task — read-only ones are enough for browsing spaces and messages.
@@ -52,10 +53,10 @@ Start with a read-only question:
 
 ## Quick start
 
-You need Node.js 20+, a Google account with access to Google Chat and OAuth credentials from a Google Cloud project with the Google Chat API enabled.
+You need Node.js 20+ and a Google account with access to Google Chat. Credentials are not required at install time — the server connects from the conversation.
 
-1. [Prepare Google OAuth access](#getting-access).
-2. Add the server to your AI app.
+1. Add the server to your AI app.
+2. Say "connect Google Chat": the assistant walks you through [creating the OAuth client and approving access](#getting-access) without editing config files or restarting.
 3. Ask the read-only question above.
 
 <details open>
@@ -63,15 +64,12 @@ You need Node.js 20+, a Google account with access to Google Chat and OAuth cred
 
 <br>
 
-**In the app:** open **Settings → MCP servers**, select **Add server**, choose **STDIO**, enter the command `npx -y mcp-google-chat@latest` and environment variables `GOOGLE_CHAT_CLIENT_ID`, `GOOGLE_CHAT_CLIENT_SECRET`, `GOOGLE_CHAT_REFRESH_TOKEN`, then select **Save** and **Restart**.
+**In the app:** open **Settings → MCP servers**, select **Add server**, choose **STDIO**, enter the command `npx -y mcp-google-chat@latest`, then select **Save**. No environment variables are needed — connect from the chat afterwards.
 
 **From the command line:**
 
 ```bash
 codex mcp add google-chat \
-  --env GOOGLE_CHAT_CLIENT_ID=your_client_id \
-  --env GOOGLE_CHAT_CLIENT_SECRET=your_client_secret \
-  --env GOOGLE_CHAT_REFRESH_TOKEN=your_refresh_token \
   -- npx -y mcp-google-chat@latest
 ```
 
@@ -90,9 +88,6 @@ codex mcp list
 
 ```bash
 claude mcp add \
-  --env GOOGLE_CHAT_CLIENT_ID=your_client_id \
-  --env GOOGLE_CHAT_CLIENT_SECRET=your_client_secret \
-  --env GOOGLE_CHAT_REFRESH_TOKEN=your_refresh_token \
   --transport stdio --scope user google-chat \
   -- npx -y mcp-google-chat@latest
 ```
@@ -119,12 +114,7 @@ This repository currently publishes an npm stdio package and does not contain a 
   "mcpServers": {
     "google-chat": {
       "command": "npx",
-      "args": ["-y", "mcp-google-chat@latest"],
-      "env": {
-        "GOOGLE_CHAT_CLIENT_ID": "your_client_id",
-        "GOOGLE_CHAT_CLIENT_SECRET": "your_client_secret",
-        "GOOGLE_CHAT_REFRESH_TOKEN": "your_refresh_token"
-      }
+      "args": ["-y", "mcp-google-chat@latest"]
     }
   }
 }
@@ -149,12 +139,7 @@ Add this to `~/.cursor/mcp.json` on macOS/Linux or `%USERPROFILE%\.cursor\mcp.js
     "google-chat": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-google-chat@latest"],
-      "env": {
-        "GOOGLE_CHAT_CLIENT_ID": "your_client_id",
-        "GOOGLE_CHAT_CLIENT_SECRET": "your_client_secret",
-        "GOOGLE_CHAT_REFRESH_TOKEN": "your_refresh_token"
-      }
+      "args": ["-y", "mcp-google-chat@latest"]
     }
   }
 }
@@ -177,19 +162,9 @@ Run **MCP: Open User Configuration** and add:
     "google-chat": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-google-chat@latest"],
-      "env": {
-        "GOOGLE_CHAT_CLIENT_ID": "${input:chat_client_id}",
-        "GOOGLE_CHAT_CLIENT_SECRET": "${input:chat_client_secret}",
-        "GOOGLE_CHAT_REFRESH_TOKEN": "${input:chat_refresh_token}"
-      }
+      "args": ["-y", "mcp-google-chat@latest"]
     }
-  },
-  "inputs": [
-    { "type": "promptString", "id": "chat_client_id", "description": "Google OAuth client ID" },
-    { "type": "promptString", "id": "chat_client_secret", "description": "Google OAuth client secret", "password": true },
-    { "type": "promptString", "id": "chat_refresh_token", "description": "Google OAuth refresh token", "password": true }
-  ]
+  }
 }
 ```
 
@@ -250,7 +225,20 @@ The AI client controls confirmation prompts. The server marks reads, writes and 
 
 ## Getting access
 
-Google Chat requires OAuth 2.0; an API key is not enough.
+Google Chat requires OAuth 2.0; an API key is not enough. There are two ways in, and the first one needs no configuration files.
+
+### Connect from the chat (recommended)
+
+Say "connect Google Chat" and the assistant runs the flow with you:
+
+1. `setup_instructions` prints the checklist: create or select a Google Cloud project, enable the **Google Chat API**, configure the consent screen and create a **Desktop app** OAuth client.
+2. Download that client's JSON ("Download JSON") and give the assistant its **path** — `set_client` stores it owner-only. The secret never goes through the conversation.
+3. `start_login` returns a Google consent link. Open it **on this machine** and approve; the code comes back to a one-shot listener on `127.0.0.1` (PKCE), never through the chat.
+4. `finish_login` exchanges the code, saves the tokens to `~/.config/mcp-google-chat/credentials.json` (mode 0600) and verifies them with a real Chat API call — so a Chat API that is still switched off is caught right there, not on your first real question.
+
+The tokens are re-read on every call, so the connection works immediately — no restart of the AI app. `auth_status` shows what is connected, `logout` revokes and deletes it. The login asks for `chat.spaces.readonly`, `chat.messages`, `chat.messages.reactions` and `chat.memberships.readonly`; the admin scope behind `search_spaces` is not requested — use the environment path if you need it.
+
+### Environment variables (CI, unattended installs)
 
 1. Create or select a Google Cloud project and enable **Google Chat API**.
 2. Configure the OAuth consent screen and create a **Desktop app** OAuth client.
@@ -271,19 +259,22 @@ For a quick session, a short-lived token in `GOOGLE_CHAT_ACCESS_TOKEN` also work
 
 ## Configuration
 
+Every variable is optional — with none of them the server connects [from the chat](#connect-from-the-chat-recommended).
+
 | Variable | Required | Description |
 |---|---|---|
-| `GOOGLE_CHAT_CLIENT_ID` | Yes* | OAuth client ID. |
-| `GOOGLE_CHAT_CLIENT_SECRET` | Yes* | OAuth client secret. |
-| `GOOGLE_CHAT_REFRESH_TOKEN` | Yes* | OAuth refresh token. |
-| `GOOGLE_CHAT_ACCESS_TOKEN` | Yes* | Short-lived alternative to the OAuth trio; can be a service-account or Chat-app token. |
+| `GOOGLE_CHAT_CLIENT_ID` | No* | OAuth client ID. |
+| `GOOGLE_CHAT_CLIENT_SECRET` | No* | OAuth client secret. |
+| `GOOGLE_CHAT_REFRESH_TOKEN` | No* | OAuth refresh token. |
+| `GOOGLE_CHAT_ACCESS_TOKEN` | No* | Short-lived alternative to the OAuth trio; can be a service-account or Chat-app token. |
+| `GOOGLE_CHAT_OAUTH_PORT` | No | Fixed loopback port for the in-chat login; useful over SSH port forwarding. |
 | `GOOGLE_CHAT_API_BASE` | No | Google Chat API base URL override. |
 | `GOOGLE_CHAT_TIMEOUT_MS` | No | Per-request timeout; default `60000` ms. |
 | `GOOGLE_CHAT_MAX_RETRIES` | No | Temporary-error retries; default `3`. |
 
-\* Provide either the OAuth trio or an access token.
+\* For the environment path, provide either the OAuth trio or an access token. When set, they win over a stored in-chat login and the server never refreshes or deletes them.
 
-Started without credentials, the server still completes the MCP handshake; the first tool call then names the exact variables to set and asks for a restart instead of failing silently.
+Started without any credentials, the server still completes the MCP handshake; the instructions and the first tool call then name both fixes — the in-chat login (no restart) and the environment variables (restart).
 
 ## Data, limits and background work
 
