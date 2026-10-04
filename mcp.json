@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "google-chat": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-google-chat@latest"
+      ]
+    }
+  }
+}

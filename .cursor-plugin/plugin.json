@@ -1,0 +1,24 @@
+{
+  "name": "mcp-google-chat",
+  "displayName": "A1 Google Chat MCP",
+  "description": "MCP server for the Google Chat API — list and search spaces, read and send messages, work with threads, reactions, attachments and memberships. For Claude, Cursor, Codex and other AI clients.",
+  "author": {
+    "name": "Aleksandr Kovalko & Zinnur Temerbekov"
+  },
+  "homepage": "https://github.com/A1-x-Tech/mcp-google-chat#readme",
+  "repository": "https://github.com/A1-x-Tech/mcp-google-chat",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "google",
+    "google-chat",
+    "chat",
+    "messaging",
+    "spaces",
+    "claude",
+    "cursor",
+    "codex"
+  ],
+  "logo": "assets/a1-logo.svg"
+}
