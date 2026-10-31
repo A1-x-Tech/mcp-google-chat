@@ -96,3 +96,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by coverage and link tests.
 
 [1.1.0]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v1.1.0
+[1.0.0]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v1.0.0
+[0.2.0]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v0.2.0
+[0.1.0]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v0.1.0
