@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] — 2026-10-31
+
+### Fixed
+
+- Telemetry: when the error excerpt finds nothing, the server's own error classes
+  (`AuthRequiredError`, `AbortError`, …) send their class name, never the message; a plain `Error`
+  and system errors send nothing. Node errors with a `code`, `errno` or `syscall` send only their type
+  and code. Such failures used to arrive with no text.
+
 ## [1.1.0] — 2026-10-31
 
 ### Changed
@@ -95,6 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Capability documentation: one task-oriented page per tool + index, enforced
   by coverage and link tests.
 
+[1.1.1]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v1.1.1
 [1.1.0]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v1.1.0
 [1.0.0]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v1.0.0
 [0.2.0]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v0.2.0
