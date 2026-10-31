@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-10-31
+
+### Changed
+
+- Telemetry: the `tool_call` event is sent when the call finishes and carries its outcome: `ok` or an
+  error category (`error_auth`, `error_invalid_request`, …). On failure it adds an excerpt of the error text, up to 200 characters, with e-mails,
+  addresses, tokens, numbers of 4+ digits and quoted text replaced by `#`; a value from the request
+  can appear in it if the error text contains it. Opt-out is unchanged:
+  `ASKADS_TELEMETRY=0`.
+
 ## [1.0.0] - 2026-09-24
 
 ### Changed
@@ -84,3 +94,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   message cycle and guaranteed cleanup.
 - Capability documentation: one task-oriented page per tool + index, enforced
   by coverage and link tests.
+
+[1.1.0]: https://github.com/A1-x-Tech/mcp-google-chat/releases/tag/v1.1.0
