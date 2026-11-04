@@ -9,6 +9,7 @@ import {
 } from "@a1-x-tech/mcp-google-auth";
 import { probeChatApi } from "../client.js";
 import { GoogleChatError } from "../types.js";
+import { fail } from "./util.js";
 
 /**
  * The scopes an in-chat login requests (see docs/TOOLS.md for the per-task
@@ -112,6 +113,8 @@ export const AUTH_OPTIONS: GoogleAuthOptions = {
   envPrefix: "GOOGLE_CHAT",
   scopes: CHAT_SCOPES,
   verifyIdentity: verifyChatIdentity,
+  // Login-tool failures go through the server's own renderer, so telemetry gets their origin.
+  fail,
 };
 
 /**
